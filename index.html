@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Animated Route</title>
+	<style>
+		html, body, #dropzone, #map {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+		}
+		#dropzone {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		#map {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div id="dropzone">
+		<p>
+		Drop your GeoJSON with LineString or <input id="file" type="file">
+		</p>
+	</div>
+	<div id="map" class="geolonia" data-hash="on"></div>
+	<script src="https://cdn.geolonia.com/v1/embed?geolonia-api-key=YOUR-API-KEY"></script>
+	<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+	<script src="./app.js"></script>
+</body>
+</html>
