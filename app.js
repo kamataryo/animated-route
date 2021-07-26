@@ -29,6 +29,8 @@ fileInput.addEventListener("change", (e) => {
   main(e.target.files[0]);
 });
 
+const sleep = (msec) => new Promise((resolve) => setTimeout(resolve, msec));
+
 const main = (file) => {
   dropzone.style.display = "none";
   mapElement.style.display = "block";
@@ -44,7 +46,7 @@ const main = (file) => {
     }
     const deparature = [...geojson.features[0].geometry.coordinates[0]];
     map.setCenter(deparature);
-    map.setZoom(12);
+    map.setZoom(14);
     const initial = {
       type: "FeatureCollection",
       features: [
@@ -74,6 +76,16 @@ const main = (file) => {
         },
       ],
     };
+    map.addSource("ar-init", { type: "geojson", data: initial });
+    map.addLayer({
+      id: "ar-init-l",
+      type: "circle",
+      source: "ar-init",
+      paint: {
+        "circle-radius": 10,
+        "circle-color": "red",
+      },
+    });
     const growingLine = {
       type: "FeatureCollection",
       features: [
@@ -87,16 +99,6 @@ const main = (file) => {
         },
       ],
     };
-    map.addSource("ar-init", { type: "geojson", data: initial });
-    map.addLayer({
-      id: "ar-init-l",
-      type: "circle",
-      source: "ar-init",
-      paint: {
-        "circle-radius": 5,
-        "circle-color": "red",
-      },
-    });
     map.addSource("ar-route", {
       type: "geojson",
       data: growingLine,
@@ -108,21 +110,32 @@ const main = (file) => {
       layout: {},
       paint: {
         "line-color": "red",
-        "line-width": 2,
+        "line-width": 3,
       },
     });
 
-    animate(geojson, map, () => {
+    const canvas = map.getCanvas();
+    const { startRecord, stopRecord } = createRecorder(canvas);
+
+    startRecord();
+    await sleep(2000);
+    animate(geojson, map, async () => {
       map.addSource("ar-term", { type: "geojson", data: terminal });
       map.addLayer({
         id: "ar-term-l",
         type: "circle",
         source: "ar-term",
         paint: {
-          "circle-radius": 5,
+          "circle-radius": 10,
           "circle-color": "red",
         },
       });
+      await sleep(10000);
+      const url = await stopRecord();
+
+      download(url);
+
+      console.log(url);
     });
   });
 };
@@ -176,8 +189,18 @@ const animate = (geojson, map, callback) => {
   };
 
   const timerId = setInterval(() => {
-    if (counter === geojson.features[0].geometry.coordinates.length) {
+    if (counter > geojson.features[0].geometry.coordinates.length) {
       clearInterval(timerId);
+      const bounds = geojson.features[0].geometry.coordinates.reduce(
+        (bounds, coord) => {
+          return bounds.extend(coord);
+        },
+        new window.mapboxgl.LngLatBounds(
+          geojson.features[0].geometry.coordinates[0],
+          geojson.features[0].geometry.coordinates[0]
+        )
+      );
+      map.fitBounds(bounds, { padding: 40, duration: 2000 });
       callback();
       return;
     } else {
@@ -186,7 +209,22 @@ const animate = (geojson, map, callback) => {
       const center = geojson.features[0].geometry.coordinates[counter];
       map.setCenter(center);
       map.getSource("ar-route").setData(growingLine);
-      counter++;
+      counter += 3;
     }
-  }, 1);
+  }, 0);
+};
+
+const download = (url) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "movie.webm";
+  document.body.appendChild(link);
+  link.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    })
+  );
+  document.body.removeChild(link);
 };
